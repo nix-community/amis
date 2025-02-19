@@ -298,6 +298,7 @@ def upload_ami(
     prefix: str,
     run_id: str,
     public: bool,
+    dest_regions: list[str],
 ) -> dict[str, str]:
     """
     Upload NixOS AMI to AWS and return the image ids for each region
@@ -323,7 +324,8 @@ def upload_ami(
     )
 
     regions = filter(
-        lambda x: x.get("RegionName") != ec2.meta.region_name,
+        lambda x: x.get("RegionName") != ec2.meta.region_name
+        and (True if dest_regions == [] else x.get("RegionName") in dest_regions),
         ec2.describe_regions()["Regions"],
     )
 
@@ -352,6 +354,13 @@ def main() -> None:
     parser.add_argument("--public", action="store_true")
     parser.add_argument("--prefix", help="Prefix to prepend to image name")
     parser.add_argument("--run-id", help="Run id to append to image name")
+    parser.add_argument(
+        "--dest-region",
+        help="Regions to copy to if copy-to-regions is enabled",
+        action="append",
+        default=[],
+    )
+
     args = parser.parse_args()
 
     level = logging.DEBUG if args.debug else logging.INFO
@@ -368,6 +377,7 @@ def main() -> None:
         args.prefix,
         args.run_id,
         args.public,
+        args.dest_region,
     )
     print(json.dumps(image_ids))
 
